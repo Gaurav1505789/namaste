@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Namaste - Admin Panel</title>
+    <link rel="stylesheet" href="../css/admin.css?v=queue-refresh-2">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <h2>🙏 Namaste</h2>
+            <p>Admin Panel</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#" class="menu-link active" data-page="dashboard">📊 Dashboard</a></li>
+            <li><a href="#" class="menu-link" data-page="products">📦 Products</a></li>
+            <li><a href="#" class="menu-link" data-page="orders">🛒 Orders</a></li>
+            <li><a href="#" class="menu-link" data-page="print-queue">🖨️ Print Queue</a></li>
+            <li><a href="#" class="menu-link" data-page="analytics">📈 Analytics</a></li>
+            <li><a href="#" class="menu-link" data-page="settings">⚙️ Settings</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <button onclick="logout()" class="btn-logout">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1>Namaste Admin</h1>
+            <div class="header-actions">
+                <span class="user-info">Admin User</span>
+                <button class="btn-icon">🔔</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <span class="stat-icon">💰</span>
+                    <div class="stat-info">
+                        <p class="stat-label">Total Sales</p>
+                        <p class="stat-value">₹0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">📦</span>
+                    <div class="stat-info">
+                        <p class="stat-label">Products</p>
+                        <p class="stat-value">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🛒</span>
+                    <div class="stat-info">
+                        <p class="stat-label">Total Orders</p>
+                        <p class="stat-value">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">👥</span>
+                    <div class="stat-info">
+                        <p class="stat-label">Customers</p>
+                        <p class="stat-value">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Page -->
+        <div id="products" class="page">
+            <div class="page-header">
+                <h2>📦 Product Management</h2>
+                <button class="btn btn-primary" onclick="openAddProductModal()">+ Add Product</button>
+            </div>
+            <div class="products-table-container">
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Price</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-tbody">
+                        <!-- Products will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Page -->
+        <div id="orders" class="page">
+            <div class="page-header">
+                <h2>🛒 Order Management</h2>
+            </div>
+            <div class="orders-table-container">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Email</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-tbody">
+                        <!-- Orders will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Print Queue Page -->
+        <div id="print-queue" class="page">
+            <div class="page-header">
+                <h2>🖨️ Customer Print Orders</h2>
+                <div class="queue-actions">
+                    <span id="queue-last-updated" class="queue-last-updated">Not loaded yet</span>
+                    <button type="button" class="btn btn-primary" id="refresh-print-queue">↻ Refresh</button>
+                </div>
+            </div>
+            <div class="queue-table-container">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Customer</th>
+                            <th>Mobile</th>
+                            <th>Roll / Dept</th>
+                            <th>File</th>
+                            <th>Print Specs</th>
+                            <th>Pages</th>
+                            <th>Copies</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="print-queue-tbody">
+                        <tr><td colspan="12" style="text-align:center;">Loading customer print orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="analytics" class="page">
+            <div class="page-header">
+                <h2>📈 Analytics</h2>
+            </div>
+            <div class="analytics-grid">
+                <div class="chart-card">
+                    <h3>Sales Trend</h3>
+                    <canvas id="sales-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Category Distribution</h3>
+                    <canvas id="category-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings" class="page">
+            <div class="page-header">
+                <h2>⚙️ Settings</h2>
+            </div>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>Razorpay Key ID</label>
+                    <input type="text" id="razorpay-key-id" placeholder="Enter Razorpay Key ID" />
+                </div>
+                <div class="form-group">
+                    <label>Razorpay Key Secret</label>
+                    <input type="password" id="razorpay-key-secret" placeholder="Enter Razorpay Key Secret" />
+                </div>
+                <div class="form-group">
+                    <label>MongoDB URI</label>
+                    <input type="text" id="mongodb-uri" placeholder="Enter MongoDB connection string" />
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeProductModal()">&times;</span>
+            <h2 id="modal-title">Add Product</h2>
+            <form id="product-form">
+                <div class="form-group">
+                    <label>Product Name (English)</label>
+                    <input type="text" id="product-name" placeholder="e.g., hello" required />
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="product-description" placeholder="Product description" rows="4" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price (₹)</label>
+                        <input type="number" id="product-price" placeholder="0" min="0" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="product-category" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="wedding">Wedding</option>
+                            <option value="festival">Festival</option>
+                            <option value="business">Business</option>
+                            <option value="kids">Kids</option>
+                            <option value="home">Home Decor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Product Image</label>
+                    <input type="file" id="product-image" accept="image/*" />
+                </div>
+                <div class="form-group">
+                    <label>Download File</label>
+                    <input type="file" id="product-file" accept=".pdf,.zip,.psd,.ai" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save Product</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/admin.js?v=cod-payment-1"></script>
+</body>
+</html>

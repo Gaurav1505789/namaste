@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Namaste Admin Login</title>
+    <style>
+        :root { --navy: #004E89; --orange: #FF6B35; --ink: #1A1A1A; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 20px; font-family: Segoe UI, Arial, sans-serif; background: linear-gradient(135deg, #004E89, #FF6B35); }
+        .login-card { width: min(420px, 100%); padding: 36px; background: white; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, .2); }
+        h1 { margin: 0 0 8px; color: var(--navy); }
+        p { color: #667085; margin: 0 0 26px; }
+        label { display: block; margin: 16px 0 7px; color: #344054; font-weight: 600; }
+        input { width: 100%; padding: 13px 14px; border: 1px solid #D0D5DD; border-radius: 8px; font: inherit; }
+        input:focus { outline: 3px solid rgba(255, 107, 53, .18); border-color: var(--orange); }
+        button { width: 100%; margin-top: 24px; padding: 13px; border: 0; border-radius: 8px; background: var(--orange); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+        button:hover { background: #E95522; }
+        .error { min-height: 20px; margin-top: 14px; color: #D92D20; font-size: 14px; }
+        .back { display: block; margin-top: 18px; color: var(--navy); text-align: center; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <h1>🙏 Namaste Admin</h1>
+        <p>Sign in to view customer print orders and submitted files.</p>
+        <form id="admin-login-form">
+            <label for="login-id">Admin Login ID</label>
+            <input id="login-id" type="text" autocomplete="username" required>
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" required>
+            <button type="submit">Sign In</button>
+            <div id="login-error" class="error" role="alert"></div>
+        </form>
+        <a class="back" href="../index.html#home">Back to student storefront</a>
+    </main>
+    <script>
+        const API_BASE_URL = `http://${window.location.hostname}:5000/api`;
+        if (localStorage.getItem('namasteAdminToken')) window.location.replace('index.html');
+        document.getElementById('admin-login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const error = document.getElementById('login-error');
+            error.textContent = '';
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loginId: document.getElementById('login-id').value.trim(),
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Login failed');
+                localStorage.setItem('namasteAdminToken', data.token);
+                localStorage.setItem('namasteAdminLoginId', data.loginId);
+                window.location.replace('index.html');
+            } catch (loginError) {
+                error.textContent = loginError.message;
+            }
+        });
+    </script>
+</body>
+</html>

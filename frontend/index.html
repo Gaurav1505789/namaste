@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Namaste Digital Printables Shop</title>
+    <link rel="stylesheet" href="css/style.css?v=print-order-1">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1 class="logo">🙏 Namaste</h1>
+                <p class="tagline">Digital Printables for Everyone</p>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home">Home</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h2>🎨 Digital Designs</h2>
+            <p>Beautiful Printable Files - Made for Everyone</p>
+            <button class="btn btn-primary" onclick="scrollToCategories()">Explore Now</button>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3>Instant Upload</h3>
+                    <p>Upload your notes in seconds</p>
+                </div>
+                <div class="feature-card print-feature-card" id="unlimited-prints-card" role="button" tabindex="0" aria-label="Open university print order">
+                    <span class="feature-icon">🖨️</span>
+                    <h3>Unlimited Prints</h3>
+                    <p>Zero queue, faster pickup</p>
+                    <span class="feature-cta">Upload &amp; Print Now →</span>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🔒</span>
+                    <h3>Secure Payment</h3>
+                    <p>UPI / Razorpay checkout</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">✨</span>
+                    <h3>Pickup in 10 mins</h3>
+                    <p>Ready for students quickly</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="campus-print-service">
+        <div class="container print-service-wrap">
+            <div class="print-service-intro">
+                <div class="eyebrow">Campus Online Print Service</div>
+                <h2>Print your notes, assignments, and exam material without standing in the photocopy queue.</h2>
+                <p>Upload a PDF or image, choose B&W or color, set copies and range, and pay online. We print it in the campus shop and notify you when it is ready.</p>
+                <ul>
+                    <li>₹3/page in B&W</li>
+                    <li>₹5/page in color</li>
+                    <li>Single / double-sided options</li>
+                    <li>Pickup token and QR receipt</li>
+                </ul>
+            </div>
+
+                        <div id="print-order-modal" class="modal print-order-modal" aria-hidden="true">
+                            <div class="modal-content print-modal-content" role="dialog" aria-modal="true" aria-labelledby="print-order-title">
+                                <div class="print-modal-header">
+                                    <div class="modal-header-info">
+                                        <h3 id="print-order-title">🖨️ University Print Order</h3>
+                                        <span class="modal-header-sub">Quick Campus Xerox &amp; Document Printing</span>
+                                    </div>
+                                    <button type="button" class="modal-close-btn" id="close-print-order" aria-label="Close and return to home" title="Back to Home">
+                                        <svg class="close-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="print-order-form card-box">
+
+                <div class="upload-dropzone" id="file-dropzone">
+                    <input type="file" id="print-file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                    <div class="upload-icon">📄</div>
+                    <p>Drag & drop your file here</p>
+                    <button type="button" class="btn btn-secondary" id="choose-file-btn">Browse Files / Camera</button>
+                    <small>Allowed: PDF, JPG, PNG (Max 25MB)</small>
+                </div>
+
+                <div id="file-preview" class="file-preview hidden"></div>
+
+                <div class="form-grid">
+                    <label>
+                        <span>Student Full Name</span>
+                        <input type="text" id="student-name" placeholder="Enter full name" required>
+                    </label>
+                    <label>
+                        <span>Mobile / WhatsApp</span>
+                        <input type="tel" id="student-phone" placeholder="10-digit number" required>
+                    </label>
+                    <label>
+                        <span>Roll Number / Department</span>
+                        <input type="text" id="student-roll" placeholder="e.g. CS-204 / CSE">
+                    </label>
+                    <label>
+                        <span>Special Instructions</span>
+                        <input type="text" id="special-instructions" placeholder="Staple on top-left, spiral binding...">
+                    </label>
+                </div>
+
+                <div class="config-row">
+                    <div class="group-box">
+                        <h4>Print Color</h4>
+                        <label class="radio-row"><input type="radio" name="colorMode" value="bw" checked> Black & White (₹3/page)</label>
+                        <label class="radio-row"><input type="radio" name="colorMode" value="color"> Color (₹5/page)</label>
+                    </div>
+
+                    <div class="group-box">
+                        <h4>Sides</h4>
+                        <label class="radio-row"><input type="radio" name="sides" value="single" checked> Single Sided</label>
+                        <label class="radio-row"><input type="radio" name="sides" value="double"> Double Sided</label>
+                    </div>
+
+                    <div class="group-box">
+                        <h4>Orientation</h4>
+                        <label class="radio-row"><input type="radio" name="orientation" value="auto" checked> Auto</label>
+                        <label class="radio-row"><input type="radio" name="orientation" value="portrait"> Portrait</label>
+                        <label class="radio-row"><input type="radio" name="orientation" value="landscape"> Landscape</label>
+                    </div>
+                </div>
+
+                <div class="config-row compact-row">
+                    <div class="group-box">
+                        <h4>Copies</h4>
+                        <div class="stepper">
+                            <button type="button" class="step-btn" data-action="minus" data-target="copies">−</button>
+                            <input type="number" id="copies" value="1" min="1" max="50">
+                            <button type="button" class="step-btn" data-action="plus" data-target="copies">+</button>
+                        </div>
+                    </div>
+
+                    <div class="group-box">
+                        <h4>Page Range</h4>
+                        <input type="text" id="page-range" value="All Pages" placeholder="All Pages or 1-5, 8">
+                        <input type="number" id="manual-page-count" min="1" value="1" aria-label="Number of pages for image upload">
+                        <small class="field-hint">For images, enter the number of pages.</small>
+                    </div>
+                </div>
+
+                <div class="price-breakdown" id="price-breakdown">
+                    <h4>Price Breakdown</h4>
+                    <div class="price-row"><span>Pages</span><strong id="price-pages">0</strong></div>
+                    <div class="price-row"><span>Rate</span><strong id="price-rate">₹3</strong></div>
+                    <div class="price-row"><span>Copies</span><strong id="price-copies">1</strong></div>
+                    <div class="price-row total"><span>Total Amount</span><strong id="price-total">₹0</strong></div>
+                </div>
+
+                <div class="payment-method-box">
+                    <h4>Payment Method</h4>
+                    <label class="radio-row"><input type="radio" name="printPaymentMethod" value="upi" checked> Pay with UPI / Paytm</label>
+                    <label class="radio-row"><input type="radio" name="printPaymentMethod" value="cod"> Cash on Delivery</label>
+                </div>
+
+                <div class="upi-payment-box">
+                    <h4>Pay securely with UPI</h4>
+                    <div class="payment-qr-frame">
+                        <img class="payment-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&amp;margin=10&amp;data=upi%3A%2F%2Fpay%3Fpa%3D8969292024%40ptyes%26pn%3DNamaste%20Campus%20Prints%26cu%3DINR" alt="UPI payment QR code">
+                    </div>
+                    <p class="payment-qr-instruction">Scan this QR to complete the payment, then upload the payment confirmation screenshot below for verification.</p>
+                    <p>Or tap below to open Paytm and pay the total amount.</p>
+                    <a id="upi-pay-link" class="btn btn-upi" href="#">Pay with Paytm</a>
+                    <label class="upi-transaction-field">
+                        <span>UPI Transaction ID / UTR</span>
+                        <input type="text" id="upi-transaction-id" placeholder="Enter the UTR after payment" autocomplete="off">
+                    </label>
+                    <label class="upi-transaction-field payment-proof-field">
+                        <span>Payment confirmation screenshot</span>
+                        <input type="file" id="payment-proof-input" accept="image/jpeg,image/png,image/webp" required>
+                    </label>
+                    <small>Payment will be verified by the campus shop admin before printing.</small>
+                </div>
+
+                <div class="cod-payment-box hidden" id="cod-payment-box">
+                    <h4>Cash on Delivery</h4>
+                    <p>Pay cash at the campus shop when you collect your printed documents.</p>
+                </div>
+
+                <button class="btn btn-primary full-width" id="submit-print-order">Submit Print Order</button>
+            </div>
+              </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Temporary: catalog sections are hidden until the shop catalog is ready. -->
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="js/main.js?v=cod-payment-1"></script>
+</body>
+</html>
