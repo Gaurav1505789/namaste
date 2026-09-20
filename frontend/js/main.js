@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = `http://${window.location.hostname}:5000/api`;
+const API_BASE_URL = 'https://namaste-backend-e64a.onrender.com/api';
 const RAZORPAY_KEY_ID = 'your_razorpay_key_id'; // Update this from backend
 const PRINT_UPI_ID = '8969292024@ptyes';
 

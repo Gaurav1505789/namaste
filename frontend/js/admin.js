@@ -1,4 +1,4 @@
-const API_BASE_URL = `http://${window.location.hostname}:5000/api`;
+const API_BASE_URL = 'https://namaste-backend-e64a.onrender.com/api';
 const ADMIN_TOKEN_KEY = 'namasteAdminToken';
 
 async function adminFetch(url, options = {}) {
