@@ -70,7 +70,7 @@ const printOrderSchema = new mongoose.Schema({
   paymentVerifiedAt: Date,
   status: {
     type: String,
-    enum: ['queued', 'printing', 'ready_for_pickup', 'collected'],
+    enum: ['queued', 'printing', 'late_printing', 'ready_for_pickup', 'collected'],
     default: 'queued'
   },
   createdAt: {

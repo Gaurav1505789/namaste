@@ -312,6 +312,23 @@ table tbody tr:hover {
     font-size: 12px;
 }
 
+.custom-notify-btn {
+    display: block;
+    margin-top: 6px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 4px;
+    background: #128c7e;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.custom-notify-btn:hover {
+    background: #0b6f63;
+}
+
 .action-buttons {
     display: flex;
     gap: 10px;

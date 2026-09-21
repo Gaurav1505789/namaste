@@ -247,11 +247,15 @@ async function loadPrintQueue() {
                     <select class="status-select" data-id="${order._id}" data-current="${order.status}">
                         <option value="queued" ${order.status === 'queued' ? 'selected' : ''}>Queued</option>
                         <option value="printing" ${order.status === 'printing' ? 'selected' : ''}>Printing</option>
+                        <option value="late_printing" ${order.status === 'late_printing' ? 'selected' : ''}>Late Printing</option>
                         <option value="ready_for_pickup" ${order.status === 'ready_for_pickup' ? 'selected' : ''}>Ready for Pickup</option>
                         <option value="collected" ${order.status === 'collected' ? 'selected' : ''}>Collected</option>
                     </select>
                 </td>
-                <td><a href="${API_BASE_URL}/print-orders/${encodeURIComponent(order._id || order.tokenId)}/file?token=${encodeURIComponent(localStorage.getItem(ADMIN_TOKEN_KEY) || '')}" target="_blank" rel="noopener" class="btn-edit" ${order.filePath ? '' : 'onclick="return false;"'}>${order.filePath ? 'View File' : 'No File'}</a></td>
+                <td>
+                    <a href="${API_BASE_URL}/print-orders/${encodeURIComponent(order._id || order.tokenId)}/file?token=${encodeURIComponent(localStorage.getItem(ADMIN_TOKEN_KEY) || '')}" target="_blank" rel="noopener" class="btn-edit" ${order.filePath ? '' : 'onclick="return false;"'}>${order.filePath ? 'View File' : 'No File'}</a>
+                    <button type="button" class="custom-notify-btn" data-mobile="${encodeURIComponent(order.mobile || '')}" data-name="${encodeURIComponent(order.studentName || 'customer')}" data-token="${encodeURIComponent(order.tokenId || '')}">Custom Notify</button>
+                </td>
             </tr>
         `).join('');
         if (updated) updated.textContent = `Updated ${new Date().toLocaleTimeString()}`;
@@ -293,6 +297,27 @@ async function loadPrintQueue() {
                 } catch (error) {
                     showToast('Unable to update payment status', true);
                 }
+            });
+        });
+
+        document.querySelectorAll('.custom-notify-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const mobile = decodeURIComponent(button.dataset.mobile || '').replace(/\D/g, '');
+                const name = decodeURIComponent(button.dataset.name || 'customer');
+                const token = decodeURIComponent(button.dataset.token || '');
+                if (!mobile) {
+                    showToast('This order has no mobile number', true);
+                    return;
+                }
+
+                const message = window.prompt(
+                    `Message for ${name} (${token})`,
+                    `Hello ${name}, your print order ${token} is delayed. We will update you when it is ready.`
+                );
+                if (message === null || !message.trim()) return;
+
+                const whatsappNumber = mobile.length === 10 ? `91${mobile}` : mobile;
+                window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message.trim())}`, '_blank', 'noopener');
             });
         });
     } catch (error) {

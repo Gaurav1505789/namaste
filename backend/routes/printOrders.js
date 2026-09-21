@@ -209,7 +209,7 @@ router.patch('/:id/payment-status', adminAuth, async (req, res) => {
 router.patch('/:id/status', adminAuth, async (req, res) => {
   try {
     const { status } = req.body;
-    const fulfillmentStatuses = ['printing', 'ready_for_pickup', 'collected'];
+    const fulfillmentStatuses = ['printing', 'late_printing', 'ready_for_pickup', 'collected'];
 
     if (!useDatabase()) {
       const index = inMemoryPrintOrders.findIndex(order => order._id === req.params.id || order.tokenId === req.params.id);
