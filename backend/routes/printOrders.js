@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const router = express.Router();
 const PrintOrder = require('../models/PrintOrder');
+const PrinterConfig = require('../models/PrinterConfig');
 const adminAuth = require('../middleware/adminAuth');
 const printAgentAuth = require('../middleware/printAgentAuth');
 
@@ -16,6 +17,7 @@ if (!fs.existsSync(uploadDir)) {
 const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 const maxSize = 25 * 1024 * 1024;
 let inMemoryPrintOrders = [];
+let inMemoryPrinters = [];
 
 const useDatabase = () => mongoose.connection.readyState === 1;
 
@@ -47,6 +49,12 @@ const configuredPrinters = () => {
   } catch (error) {
     return [];
   }
+};
+
+const getPrinterNames = async () => {
+  if (!useDatabase()) return inMemoryPrinters.length ? inMemoryPrinters : configuredPrinters();
+  const config = await PrinterConfig.findOne({ key: 'default' }).lean();
+  return config?.printers?.length ? config.printers : configuredPrinters();
 };
 
 const normalizeOrder = (order) => ({
@@ -212,8 +220,43 @@ router.get('/:id/file', adminAuth, async (req, res) => {
   }
 });
 
-router.get('/available-printers', (req, res) => {
-  return res.json({ printers: configuredPrinters() });
+router.get('/available-printers', async (req, res) => {
+  try {
+    return res.json({ printers: await getPrinterNames() });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/printer-settings', adminAuth, async (req, res) => {
+  try {
+    return res.json({ printers: await getPrinterNames() });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put('/printer-settings', adminAuth, async (req, res) => {
+  try {
+    const printers = [...new Set((Array.isArray(req.body?.printers) ? req.body.printers : [])
+      .map(printer => String(printer).trim())
+      .filter(Boolean))];
+    if (printers.length > 20) return res.status(400).json({ message: 'You can save up to 20 printers.' });
+
+    if (!useDatabase()) {
+      inMemoryPrinters = printers;
+      return res.json({ printers });
+    }
+
+    const config = await PrinterConfig.findOneAndUpdate(
+      { key: 'default' },
+      { key: 'default', printers, updatedAt: new Date() },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+    return res.json({ printers: config.printers });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 });
 
 router.get('/agent/jobs', printAgentAuth, async (req, res) => {

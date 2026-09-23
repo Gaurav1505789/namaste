@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     setupMenuLinks();
     setupProductForm();
+    setupPrinterSettings();
     document.getElementById('refresh-print-queue')?.addEventListener('click', loadPrintQueue);
     loadDashboard();
     loadPrintQueue();
@@ -332,6 +333,37 @@ async function loadPrintQueue() {
 function loadAnalytics() {
     // This would typically load chart data from the API
     console.log('Loading analytics...');
+}
+
+async function setupPrinterSettings() {
+    const input = document.getElementById('printer-names');
+    const saveButton = document.getElementById('save-printers-btn');
+    if (!input || !saveButton) return;
+
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/print-orders/printer-settings`);
+        const data = await response.json();
+        if (response.ok) input.value = (data.printers || []).join('\n');
+    } catch (error) {
+        showToast('Unable to load printer settings', true);
+    }
+
+    saveButton.addEventListener('click', async () => {
+        const printers = input.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+        try {
+            const response = await adminFetch(`${API_BASE_URL}/print-orders/printer-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ printers })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Unable to save printers');
+            input.value = data.printers.join('\n');
+            showToast('Printer names saved. They are now available on the main webpage.');
+        } catch (error) {
+            showToast(error.message, true);
+        }
+    });
 }
 
 // Open Add Product Modal
