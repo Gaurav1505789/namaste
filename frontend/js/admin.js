@@ -409,19 +409,6 @@ function viewOrder(orderId) {
     alert('Order Details: ' + orderId);
 }
 
-// Save Settings
-function saveSettings() {
-    const settings = {
-        razorpayKeyId: document.getElementById('razorpay-key-id').value,
-        razorpayKeySecret: document.getElementById('razorpay-key-secret').value,
-        mongodbUri: document.getElementById('mongodb-uri').value
-    };
-    
-    // Save to localStorage (in real app, send to backend)
-    localStorage.setItem('namasteSettings', JSON.stringify(settings));
-    showToast('Settings saved successfully');
-}
-
 // Logout
 function logout() {
     if (confirm('Are you sure you want to logout?')) {

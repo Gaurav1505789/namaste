@@ -177,25 +177,12 @@
                 <h2>⚙️ Settings</h2>
             </div>
             <div class="settings-form">
-                <div class="form-group">
-                    <label>Razorpay Key ID</label>
-                    <input type="text" id="razorpay-key-id" placeholder="Enter Razorpay Key ID" />
-                </div>
-                <div class="form-group">
-                    <label>Razorpay Key Secret</label>
-                    <input type="password" id="razorpay-key-secret" placeholder="Enter Razorpay Key Secret" />
-                </div>
-                <div class="form-group">
-                    <label>MongoDB URI</label>
-                    <input type="text" id="mongodb-uri" placeholder="Enter MongoDB connection string" />
-                </div>
                 <div class="form-group print-settings-section">
                     <label for="printer-names">Printers shown to customers</label>
                     <textarea id="printer-names" rows="5" placeholder="One exact Windows printer name per line"></textarea>
                     <small>Use the exact name shown by Windows on the computer running the printer agent.</small>
                     <button type="button" class="btn btn-primary" id="save-printers-btn">Save Printer Names</button>
                 </div>
-                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
             </div>
         </div>
     </div>
