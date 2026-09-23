@@ -354,7 +354,9 @@ function setupPrintOrderUI() {
     fetch(`${API_BASE_URL}/print-orders/available-printers`)
         .then(response => response.json())
         .then(data => {
-            const printers = Array.isArray(data.printers) ? data.printers : [];
+            const printers = Array.isArray(data.printers) && data.printers.length
+                ? data.printers
+                : ['c1 printer', 'c2 printer'];
             printerSelect.innerHTML = printers.length
                 ? printers.map(printer => `<option value="${printer.replace(/"/g, '&quot;')}">${printer}</option>`).join('')
                 : '<option value="">No printers configured</option>';
