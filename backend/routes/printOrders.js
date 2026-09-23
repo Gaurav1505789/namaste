@@ -45,9 +45,10 @@ const queuePaidOrder = async (order) => {
 const configuredPrinters = () => {
   try {
     const printers = JSON.parse(process.env.PRINT_PRINTERS || '[]');
-    return Array.isArray(printers) ? printers.filter(Boolean) : [];
+    if (Array.isArray(printers) && printers.filter(Boolean).length) return printers.filter(Boolean);
+    return ['c1 printer', 'c2 printer'];
   } catch (error) {
-    return [];
+    return ['c1 printer', 'c2 printer'];
   }
 };
 
