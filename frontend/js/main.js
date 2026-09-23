@@ -349,12 +349,26 @@ function setupPrintOrderUI() {
     const upiPayLink = document.getElementById('upi-pay-link');
     const codPaymentBox = document.getElementById('cod-payment-box');
     const paymentMethodInputs = document.querySelectorAll('input[name="printPaymentMethod"]');
+    const printerSelect = document.getElementById('print-printer');
+
+    fetch(`${API_BASE_URL}/print-orders/available-printers`)
+        .then(response => response.json())
+        .then(data => {
+            const printers = Array.isArray(data.printers) ? data.printers : [];
+            printerSelect.innerHTML = printers.length
+                ? printers.map(printer => `<option value="${printer.replace(/"/g, '&quot;')}">${printer}</option>`).join('')
+                : '<option value="">No printers configured</option>';
+        })
+        .catch(() => {
+            printerSelect.innerHTML = '<option value="">Printer service unavailable</option>';
+        });
 
     const updatePaymentMethodUI = () => {
         const method = document.querySelector('input[name="printPaymentMethod"]:checked')?.value || 'upi';
         const isCod = method === 'cod';
+        const isUpi = method === 'upi';
         codPaymentBox?.classList.toggle('hidden', !isCod);
-        document.querySelector('.upi-payment-box')?.classList.toggle('hidden', isCod);
+        document.querySelector('.upi-payment-box')?.classList.toggle('hidden', !isUpi);
     };
 
     paymentMethodInputs.forEach(input => input.addEventListener('change', updatePaymentMethodUI));
@@ -537,6 +551,8 @@ async function submitPrintOrder() {
         const totalPages = pageCount > 0 ? pageCount : 1;
         const amount = totalPages * rate * copies;
         const paymentMethod = document.querySelector('input[name="printPaymentMethod"]:checked')?.value || 'upi';
+        const printerName = document.getElementById('print-printer').value;
+        if (!printerName) throw new Error('Select a printer before submitting the order.');
         const upiTransactionId = document.getElementById('upi-transaction-id').value.trim();
         if (paymentMethod === 'upi' && !upiTransactionId) {
             throw new Error('Pay using UPI and enter the transaction ID / UTR before submitting.');
@@ -579,7 +595,7 @@ async function submitPrintOrder() {
             paymentProofPath: paymentProofData.filePath || '',
             paymentProofFileType: paymentProofData.fileType || '',
             paymentProofFileSize: paymentProofData.fileSize || 0,
-            totalAmount: amount, paymentMethod,
+            totalAmount: amount, paymentMethod, printerName,
             upiTransactionId: paymentMethod === 'upi' ? upiTransactionId : '', paymentStatus: 'pending'
         };
 
@@ -588,11 +604,58 @@ async function submitPrintOrder() {
         });
         const orderData = await orderResponse.json();
         if (!orderResponse.ok) throw new Error(orderData.message || 'Order creation failed');
+        if (paymentMethod === 'razorpay') {
+            await initializePrintRazorpay(orderData.order, studentName, phone, amount);
+            return;
+        }
         showPrintSuccessModal(orderData.tokenId, studentName, phone, amount, 'pending');
     } catch (error) {
         console.error(error);
         showToast(error.message || 'Error submitting print order', true);
     }
+}
+
+async function initializePrintRazorpay(printOrder, studentName, phone, amount) {
+    const createResponse = await fetch(`${API_BASE_URL}/payments/create-print-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, printOrderId: printOrder._id, customerName: studentName, customerPhone: phone })
+    });
+    const paymentOrder = await createResponse.json();
+    if (!createResponse.ok) throw new Error(paymentOrder.message || 'Unable to start online payment');
+
+    const verify = (response) => verifyPrintPayment(response, printOrder._id, studentName, phone, amount);
+    if (paymentOrder.demo) {
+        await verify({
+            razorpay_order_id: paymentOrder.orderId,
+            razorpay_payment_id: 'demo_payment_id',
+            razorpay_signature: 'demo_signature'
+        });
+        return;
+    }
+
+    const rzp = new Razorpay({
+        key: paymentOrder.key,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        order_id: paymentOrder.orderId,
+        handler: verify,
+        prefill: { name: studentName, contact: phone },
+        theme: { color: '#FF6B35' }
+    });
+    rzp.open();
+}
+
+async function verifyPrintPayment(paymentResponse, printOrderId, studentName, phone, amount) {
+    const response = await fetch(`${API_BASE_URL}/payments/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...paymentResponse, printOrderId })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || 'Print payment verification failed');
+    showPrintSuccessModal(data.order.tokenId, studentName, phone, amount, 'paid');
+    showToast('Payment successful. Your document was sent to the printer.');
 }
 
 function showPrintSuccessModal(tokenId, studentName, phone, amount, paymentStatus = 'paid') {

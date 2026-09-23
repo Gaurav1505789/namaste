@@ -237,7 +237,7 @@ async function loadPrintQueue() {
                 <td>
                     <small class="payment-utr">${order.paymentMethod === 'cod' ? 'Cash on Delivery' : (order.upiTransactionId || 'No UTR')}</small>
                     ${order.paymentProofPath ? `<a href="${API_BASE_URL}/print-orders/${encodeURIComponent(order._id || order.tokenId)}/payment-proof?token=${encodeURIComponent(localStorage.getItem(ADMIN_TOKEN_KEY) || '')}" target="_blank" rel="noopener" class="payment-proof-link">View Proof</a>` : '<small class="payment-utr">No proof</small>'}
-                    <select class="payment-status-select" data-id="${order._id || order.tokenId}">
+                    <select class="payment-status-select" data-id="${order._id || order.tokenId}" ${order.paymentMethod === 'razorpay' ? 'disabled title="Razorpay payment is verified automatically"' : ''}>
                         <option value="pending" ${(order.paymentStatus || 'pending') === 'pending' ? 'selected' : ''}>Pending</option>
                         <option value="paid" ${order.paymentStatus === 'paid' ? 'selected' : ''}>Paid</option>
                         <option value="rejected" ${order.paymentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
@@ -253,6 +253,7 @@ async function loadPrintQueue() {
                     </select>
                 </td>
                 <td>
+                    <small class="payment-utr">Print: ${order.printStatus || 'not_queued'}${order.printError ? ` - ${order.printError}` : ''}</small>
                     <a href="${API_BASE_URL}/print-orders/${encodeURIComponent(order._id || order.tokenId)}/file?token=${encodeURIComponent(localStorage.getItem(ADMIN_TOKEN_KEY) || '')}" target="_blank" rel="noopener" class="btn-edit" ${order.filePath ? '' : 'onclick="return false;"'}>${order.filePath ? 'View File' : 'No File'}</a>
                     <button type="button" class="custom-notify-btn" data-mobile="${encodeURIComponent(order.mobile || '')}" data-name="${encodeURIComponent(order.studentName || 'customer')}" data-token="${encodeURIComponent(order.tokenId || '')}">Custom Notify</button>
                 </td>

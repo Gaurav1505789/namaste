@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const PrintOrder = require('../models/PrintOrder');
 const adminAuth = require('../middleware/adminAuth');
+const printAgentAuth = require('../middleware/printAgentAuth');
 
 const uploadDir = path.join(__dirname, '..', 'uploads', 'prints');
 if (!fs.existsSync(uploadDir)) {
@@ -17,6 +18,36 @@ const maxSize = 25 * 1024 * 1024;
 let inMemoryPrintOrders = [];
 
 const useDatabase = () => mongoose.connection.readyState === 1;
+
+const queuePaidOrder = async (order) => {
+  if (!order || order.paymentMethod !== 'razorpay' || order.paymentStatus !== 'paid' || ['queued', 'printing', 'printed', 'skipped'].includes(order.printStatus)) {
+    return order;
+  }
+
+  const queuedAt = new Date();
+  if (useDatabase()) {
+    order = await PrintOrder.findByIdAndUpdate(
+      order._id,
+      { printStatus: 'queued', printQueuedAt: queuedAt, printError: '', updatedAt: queuedAt },
+      { new: true }
+    );
+  } else {
+    order.printStatus = 'queued';
+    order.printQueuedAt = queuedAt.toISOString();
+    order.printError = '';
+  }
+
+  return order;
+};
+
+const configuredPrinters = () => {
+  try {
+    const printers = JSON.parse(process.env.PRINT_PRINTERS || '[]');
+    return Array.isArray(printers) ? printers.filter(Boolean) : [];
+  } catch (error) {
+    return [];
+  }
+};
 
 const normalizeOrder = (order) => ({
   ...order,
@@ -108,8 +139,10 @@ router.post('/', async (req, res) => {
       paymentProofFileSize: payload.paymentProofFileSize || 0,
       totalAmount: total,
       paymentMethod: payload.paymentMethod || 'upi',
+      printerName: payload.printerName || '',
       upiTransactionId: payload.upiTransactionId || '',
       paymentStatus: payload.paymentStatus || 'pending',
+      printStatus: 'not_queued',
       status: 'queued',
       createdAt: new Date().toISOString()
     };
@@ -179,6 +212,70 @@ router.get('/:id/file', adminAuth, async (req, res) => {
   }
 });
 
+router.get('/available-printers', (req, res) => {
+  return res.json({ printers: configuredPrinters() });
+});
+
+router.get('/agent/jobs', printAgentAuth, async (req, res) => {
+  try {
+    const printerName = String(req.query.printerName || '').trim();
+    if (!printerName) return res.status(400).json({ message: 'printerName is required' });
+
+    if (!useDatabase()) {
+      const job = inMemoryPrintOrders.find(order => order.paymentStatus === 'paid'
+        && order.printStatus === 'queued'
+        && order.printerName === printerName);
+      if (!job) return res.json({ job: null });
+      job.printStatus = 'printing';
+      job.updatedAt = new Date().toISOString();
+      return res.json({ job });
+    }
+
+    const job = await PrintOrder.findOneAndUpdate(
+      { paymentStatus: 'paid', printStatus: 'queued', printerName },
+      { printStatus: 'printing', updatedAt: new Date() },
+      { sort: { printQueuedAt: 1 }, new: true }
+    );
+    return res.json({ job: job || null });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/agent/jobs/:id/file', printAgentAuth, async (req, res) => {
+  try {
+    const order = useDatabase()
+      ? await PrintOrder.findById(req.params.id)
+      : inMemoryPrintOrders.find(item => item._id === req.params.id || item.tokenId === req.params.id);
+    if (!order || order.paymentStatus !== 'paid' || order.printStatus !== 'printing' || !order.filePath || !fs.existsSync(order.filePath)) {
+      return res.status(404).json({ message: 'Paid printing job file not found' });
+    }
+    return res.sendFile(path.resolve(order.filePath));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch('/agent/jobs/:id', printAgentAuth, async (req, res) => {
+  try {
+    const { printStatus, printError } = req.body || {};
+    if (!['printed', 'failed'].includes(printStatus)) return res.status(400).json({ message: 'Invalid print status' });
+    const update = { printStatus, printError: printError || '', updatedAt: new Date() };
+    if (printStatus === 'printed') update.printedAt = new Date();
+    if (!useDatabase()) {
+      const job = inMemoryPrintOrders.find(item => item._id === req.params.id || item.tokenId === req.params.id);
+      if (!job || job.paymentStatus !== 'paid') return res.status(404).json({ message: 'Paid print job not found' });
+      Object.assign(job, { ...update, updatedAt: update.updatedAt.toISOString(), printedAt: update.printedAt?.toISOString() });
+      return res.json({ job });
+    }
+    const job = await PrintOrder.findOneAndUpdate({ _id: req.params.id, paymentStatus: 'paid', printStatus: 'printing' }, update, { new: true });
+    if (!job) return res.status(404).json({ message: 'Paid print job not found' });
+    return res.json({ job });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.patch('/:id/payment-status', adminAuth, async (req, res) => {
   try {
     const { paymentStatus } = req.body || {};
@@ -189,17 +286,27 @@ router.patch('/:id/payment-status', adminAuth, async (req, res) => {
     if (!useDatabase()) {
       const order = inMemoryPrintOrders.find(item => item._id === req.params.id || item.tokenId === req.params.id);
       if (!order) return res.status(404).json({ message: 'Order not found' });
+      if (paymentStatus === 'paid' && order.paymentMethod === 'razorpay' && order.paymentStatus !== 'paid') {
+        return res.status(400).json({ message: 'Razorpay payments must be verified online.' });
+      }
       order.paymentStatus = paymentStatus;
       order.paymentVerifiedAt = paymentStatus === 'paid' ? new Date().toISOString() : undefined;
-      return res.json(order);
+      const updatedOrder = paymentStatus === 'paid' ? await queuePaidOrder(order) : order;
+      return res.json(updatedOrder);
     }
 
-    const order = await PrintOrder.findByIdAndUpdate(
+    const currentOrder = await PrintOrder.findById(req.params.id);
+    if (!currentOrder) return res.status(404).json({ message: 'Order not found' });
+    if (paymentStatus === 'paid' && currentOrder.paymentMethod === 'razorpay' && currentOrder.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'Razorpay payments must be verified online.' });
+    }
+
+    let order = await PrintOrder.findByIdAndUpdate(
       req.params.id,
       { paymentStatus, paymentVerifiedAt: paymentStatus === 'paid' ? new Date() : null, updatedAt: new Date() },
       { new: true }
     );
-    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (paymentStatus === 'paid') order = await queuePaidOrder(order);
     return res.json(order);
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -249,5 +356,7 @@ router.patch('/:id/status', adminAuth, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+router.queuePaidOrder = queuePaidOrder;
 
 module.exports = router;

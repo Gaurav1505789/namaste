@@ -166,9 +166,18 @@
 
                 <div class="payment-method-box">
                     <h4>Payment Method</h4>
+                    <label class="radio-row"><input type="radio" name="printPaymentMethod" value="razorpay"> Pay online with Razorpay</label>
                     <label class="radio-row"><input type="radio" name="printPaymentMethod" value="upi" checked> Pay with UPI / Paytm</label>
                     <label class="radio-row"><input type="radio" name="printPaymentMethod" value="cod"> Cash on Delivery</label>
                 </div>
+
+                <label class="upi-transaction-field" for="print-printer">
+                    <span>Printer</span>
+                    <select id="print-printer" required>
+                        <option value="">Loading printers...</option>
+                    </select>
+                    <small>Online-paid orders are sent only to the selected printer. Cash orders are not printed automatically.</small>
+                </label>
 
                 <div class="upi-payment-box">
                     <h4>Pay securely with UPI</h4>

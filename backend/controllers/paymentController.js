@@ -1,5 +1,7 @@
 const Razorpay = require('razorpay');
 const Order = require('../models/Order');
+const PrintOrder = require('../models/PrintOrder');
+const printOrdersRouter = require('../routes/printOrders');
 const crypto = require('crypto');
 
 const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
@@ -71,10 +73,67 @@ exports.createOrder = async (req, res) => {
   }
 };
 
+exports.createPrintOrderPayment = async (req, res) => {
+  try {
+    const { amount, printOrderId, customerName, customerPhone } = req.body;
+    const printOrder = await PrintOrder.findById(printOrderId);
+    if (!printOrder || printOrder.paymentStatus !== 'pending') {
+      return res.status(400).json({ message: 'Print order is not available for payment' });
+    }
+
+    if (!razorpay) {
+      return res.json({
+        orderId: `demo_print_order_${printOrder._id}`,
+        amount: Math.round(Number(amount) * 100),
+        currency: 'INR',
+        key: 'rzp_test_demo',
+        demo: true
+      });
+    }
+
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(Number(amount) * 100),
+      currency: 'INR',
+      receipt: `print_${printOrder.tokenId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}`,
+      notes: { printOrderId: String(printOrder._id), customerName, customerPhone },
+      payment_capture: 1
+    });
+
+    printOrder.razorpayOrderId = razorpayOrder.id;
+    await printOrder.save();
+    return res.json({ orderId: razorpayOrder.id, amount: razorpayOrder.amount, currency: razorpayOrder.currency, key: process.env.RAZORPAY_KEY_ID });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 // Verify payment
 exports.verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, printOrderId } = req.body;
+
+    if (printOrderId) {
+      const printOrder = await PrintOrder.findById(printOrderId);
+      if (!printOrder) return res.status(404).json({ success: false, message: 'Print order not found' });
+
+      const isDemo = !razorpay || !process.env.RAZORPAY_KEY_SECRET;
+      const sign = `${razorpay_order_id}|${razorpay_payment_id}`;
+      const expectedSign = isDemo ? razorpay_signature : crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(sign)
+        .digest('hex');
+      if (!isDemo && razorpay_signature !== expectedSign) {
+        return res.status(400).json({ success: false, message: 'Invalid signature' });
+      }
+
+      printOrder.paymentStatus = 'paid';
+      printOrder.razorpayOrderId = razorpay_order_id;
+      printOrder.razorpayPaymentId = razorpay_payment_id || 'demo_payment_id';
+      printOrder.paymentVerifiedAt = new Date();
+      await printOrder.save();
+      const queuedOrder = await printOrdersRouter.queuePaidOrder(printOrder);
+      return res.json({ success: true, message: 'Print payment verified', order: queuedOrder, demo: isDemo });
+    }
 
     if (!razorpay || !process.env.RAZORPAY_KEY_SECRET) {
       const order = await Order.findOneAndUpdate(
