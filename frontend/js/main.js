@@ -621,12 +621,13 @@ async function initializePrintRazorpay(printOrder, studentName, phone, amount) {
     const createResponse = await fetch(`${API_BASE_URL}/payments/create-print-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, printOrderId: printOrder._id, customerName: studentName, customerPhone: phone })
+        body: JSON.stringify({ amount, printOrderId: printOrder._id || printOrder.tokenId, customerName: studentName, customerPhone: phone })
     });
     const paymentOrder = await createResponse.json();
     if (!createResponse.ok) throw new Error(paymentOrder.message || 'Unable to start online payment');
 
-    const verify = (response) => verifyPrintPayment(response, printOrder._id, studentName, phone, amount);
+    const printOrderIdentifier = printOrder._id || printOrder.tokenId;
+    const verify = (response) => verifyPrintPayment(response, printOrderIdentifier, studentName, phone, amount);
     if (paymentOrder.demo) {
         await verify({
             razorpay_order_id: paymentOrder.orderId,
