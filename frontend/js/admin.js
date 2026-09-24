@@ -236,7 +236,13 @@ async function loadPrintQueue() {
                 <td>${order.copies || 1}</td>
                 <td>₹${order.totalAmount || 0}</td>
                 <td>
-                    <small class="payment-utr">No payment required</small>
+                    <small class="payment-utr">${order.paymentMethod === 'cod' ? 'Cash on Delivery' : (order.upiTransactionId || 'No UTR')}</small>
+                    ${order.paymentProofPath ? `<a href="${API_BASE_URL}/print-orders/${encodeURIComponent(order._id || order.tokenId)}/payment-proof?token=${encodeURIComponent(localStorage.getItem(ADMIN_TOKEN_KEY) || '')}" target="_blank" rel="noopener" class="payment-proof-link">View Proof</a>` : '<small class="payment-utr">No proof</small>'}
+                    <select class="payment-status-select" data-id="${order._id || order.tokenId}" ${order.paymentMethod === 'razorpay' ? 'disabled title="Razorpay payment is verified automatically"' : ''}>
+                        <option value="pending" ${(order.paymentStatus || 'pending') === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="paid" ${order.paymentStatus === 'paid' ? 'selected' : ''}>Paid</option>
+                        <option value="rejected" ${order.paymentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+                    </select>
                 </td>
                 <td>
                     <select class="status-select" data-id="${order._id}" data-current="${order.status}">

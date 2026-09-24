@@ -22,7 +22,7 @@ let inMemoryPrinters = [];
 const useDatabase = () => mongoose.connection.readyState === 1;
 
 const queuePaidOrder = async (order) => {
-  if (!order || !['paid', 'not_required'].includes(order.paymentStatus) || ['queued', 'printing', 'printed', 'skipped'].includes(order.printStatus)) {
+  if (!order || order.paymentMethod === 'cod' || order.paymentStatus !== 'paid' || ['queued', 'printing', 'printed', 'skipped'].includes(order.printStatus)) {
     return order;
   }
 
@@ -147,12 +147,11 @@ router.post('/', async (req, res) => {
       paymentProofFileType: payload.paymentProofFileType || '',
       paymentProofFileSize: payload.paymentProofFileSize || 0,
       totalAmount: total,
-      paymentMethod: payload.paymentMethod || 'none',
+      paymentMethod: payload.paymentMethod || 'upi',
       printerName: payload.printerName || '',
       upiTransactionId: payload.upiTransactionId || '',
-      paymentStatus: payload.paymentStatus || 'not_required',
-      printStatus: 'queued',
-      printQueuedAt: new Date(),
+      paymentStatus: payload.paymentStatus || 'pending',
+      printStatus: 'not_queued',
       status: 'queued',
       createdAt: new Date().toISOString()
     };
@@ -267,7 +266,8 @@ router.get('/agent/jobs', printAgentAuth, async (req, res) => {
     if (!printerName) return res.status(400).json({ message: 'printerName is required' });
 
     if (!useDatabase()) {
-      const job = inMemoryPrintOrders.find(order => order.printStatus === 'queued'
+      const job = inMemoryPrintOrders.find(order => order.paymentStatus === 'paid'
+        && order.printStatus === 'queued'
         && order.printerName === printerName);
       if (!job) return res.json({ job: null });
       job.printStatus = 'printing';
@@ -276,7 +276,7 @@ router.get('/agent/jobs', printAgentAuth, async (req, res) => {
     }
 
     const job = await PrintOrder.findOneAndUpdate(
-      { printStatus: 'queued', printerName },
+      { paymentStatus: 'paid', printStatus: 'queued', printerName },
       { printStatus: 'printing', updatedAt: new Date() },
       { sort: { printQueuedAt: 1 }, new: true }
     );
@@ -291,8 +291,8 @@ router.get('/agent/jobs/:id/file', printAgentAuth, async (req, res) => {
     const order = useDatabase()
       ? await PrintOrder.findById(req.params.id)
       : inMemoryPrintOrders.find(item => item._id === req.params.id || item.tokenId === req.params.id);
-    if (!order || order.printStatus !== 'printing' || !order.filePath || !fs.existsSync(order.filePath)) {
-      return res.status(404).json({ message: 'Printing job file not found' });
+    if (!order || order.paymentStatus !== 'paid' || order.printStatus !== 'printing' || !order.filePath || !fs.existsSync(order.filePath)) {
+      return res.status(404).json({ message: 'Paid printing job file not found' });
     }
     return res.sendFile(path.resolve(order.filePath));
   } catch (error) {
@@ -308,12 +308,12 @@ router.patch('/agent/jobs/:id', printAgentAuth, async (req, res) => {
     if (printStatus === 'printed') update.printedAt = new Date();
     if (!useDatabase()) {
       const job = inMemoryPrintOrders.find(item => item._id === req.params.id || item.tokenId === req.params.id);
-      if (!job || job.printStatus !== 'printing') return res.status(404).json({ message: 'Print job not found' });
+      if (!job || job.paymentStatus !== 'paid') return res.status(404).json({ message: 'Paid print job not found' });
       Object.assign(job, { ...update, updatedAt: update.updatedAt.toISOString(), printedAt: update.printedAt?.toISOString() });
       return res.json({ job });
     }
-    const job = await PrintOrder.findOneAndUpdate({ _id: req.params.id, printStatus: 'printing' }, update, { new: true });
-    if (!job) return res.status(404).json({ message: 'Print job not found' });
+    const job = await PrintOrder.findOneAndUpdate({ _id: req.params.id, paymentStatus: 'paid', printStatus: 'printing' }, update, { new: true });
+    if (!job) return res.status(404).json({ message: 'Paid print job not found' });
     return res.json({ job });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -368,6 +368,10 @@ router.patch('/:id/status', adminAuth, async (req, res) => {
         return res.status(404).json({ message: 'Order not found' });
       }
 
+      if (fulfillmentStatuses.includes(status) && inMemoryPrintOrders[index].paymentStatus !== 'paid') {
+        return res.status(400).json({ message: 'Verify the UPI payment before moving this order forward.' });
+      }
+
       inMemoryPrintOrders[index].status = status;
       inMemoryPrintOrders[index].updatedAt = new Date().toISOString();
       return res.json(inMemoryPrintOrders[index]);
@@ -377,6 +381,10 @@ router.patch('/:id/status', adminAuth, async (req, res) => {
     if (!currentOrder) {
       return res.status(404).json({ message: 'Order not found' });
     }
+    if (fulfillmentStatuses.includes(status) && currentOrder.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'Verify the UPI payment before moving this order forward.' });
+    }
+
     const order = await PrintOrder.findByIdAndUpdate(
       req.params.id,
       { status, updatedAt: Date.now() },
