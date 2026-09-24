@@ -58,8 +58,8 @@ const printOrderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['upi', 'razorpay', 'cod'],
-    default: 'upi'
+    enum: ['none', 'upi', 'razorpay', 'cod'],
+    default: 'none'
   },
   upiTransactionId: String,
   razorpayOrderId: String,
@@ -67,8 +67,8 @@ const printOrderSchema = new mongoose.Schema({
   printerName: String,
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'rejected'],
-    default: 'pending'
+    enum: ['not_required', 'pending', 'paid', 'rejected'],
+    default: 'not_required'
   },
   paymentVerifiedAt: Date,
   status: {

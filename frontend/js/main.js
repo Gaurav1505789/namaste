@@ -1,6 +1,5 @@
 // API Configuration
 const API_BASE_URL = 'https://namaste-backend-e64a.onrender.com/api';
-const PRINT_UPI_ID = '8969292024@ptyes';
 
 // Sample Products Data
 const sampleProducts = [
@@ -213,9 +212,6 @@ function setupPrintOrderUI() {
     const copiesInput = document.getElementById('copies');
     const pageRangeInput = document.getElementById('page-range');
     const manualPageCount = document.getElementById('manual-page-count');
-    const upiPayLink = document.getElementById('upi-pay-link');
-    const codPaymentBox = document.getElementById('cod-payment-box');
-    const paymentMethodInputs = document.querySelectorAll('input[name="printPaymentMethod"]');
     const printerSelect = document.getElementById('print-printer');
 
     fetch(`${API_BASE_URL}/print-orders/available-printers`)
@@ -231,21 +227,6 @@ function setupPrintOrderUI() {
         .catch(() => {
             printerSelect.innerHTML = '<option value="">Printer service unavailable</option>';
         });
-
-    const updatePaymentMethodUI = () => {
-        const method = document.querySelector('input[name="printPaymentMethod"]:checked')?.value || 'upi';
-        const isCod = method === 'cod';
-        const isUpi = method === 'upi';
-        codPaymentBox?.classList.toggle('hidden', !isCod);
-        document.querySelector('.upi-payment-box')?.classList.toggle('hidden', !isUpi);
-    };
-
-    paymentMethodInputs.forEach(input => input.addEventListener('change', updatePaymentMethodUI));
-    updatePaymentMethodUI();
-    upiPayLink?.addEventListener('click', () => {
-        const amount = document.getElementById('price-total')?.textContent.replace(/[^0-9.]/g, '') || '0';
-        upiPayLink.href = `paytmmp://pay?pa=${encodeURIComponent(PRINT_UPI_ID)}&pn=Namaste%20Campus%20Prints&am=${amount}&cu=INR`;
-    });
 
     const openPrintOrder = () => {
         printModal?.classList.add('show');
@@ -419,38 +400,14 @@ async function submitPrintOrder() {
         const pageCount = Number(document.getElementById('page-range').dataset.pageCount || document.getElementById('manual-page-count').value || 1);
         const totalPages = pageCount > 0 ? pageCount : 1;
         const amount = totalPages * rate * copies;
-        const paymentMethod = document.querySelector('input[name="printPaymentMethod"]:checked')?.value || 'upi';
         const printerName = document.getElementById('print-printer').value;
         if (!printerName) throw new Error('Select a printer before submitting the order.');
-        const upiTransactionId = document.getElementById('upi-transaction-id').value.trim();
-        if (paymentMethod === 'upi' && !upiTransactionId) {
-            throw new Error('Pay using UPI and enter the transaction ID / UTR before submitting.');
-        }
-        const paymentProof = document.getElementById('payment-proof-input')?.files?.[0];
-        if (paymentMethod === 'upi' && !paymentProof) {
-            throw new Error('Upload your payment confirmation screenshot before submitting.');
-        }
-        if (paymentMethod === 'upi' && !['image/jpeg', 'image/png', 'image/webp'].includes(paymentProof.type)) {
-            throw new Error('Payment confirmation must be a JPG, PNG, or WEBP image.');
-        }
-        if (paymentMethod === 'upi' && paymentProof.size > 10 * 1024 * 1024) {
-            throw new Error('Payment confirmation screenshot must be under 10MB.');
-        }
 
         const uploadForm = new FormData();
         uploadForm.append('file', document.getElementById('print-file-input').files[0]);
         const uploadResponse = await fetch(`${API_BASE_URL}/print-orders/upload`, { method: 'POST', body: uploadForm });
         const uploadData = await uploadResponse.json();
         if (!uploadResponse.ok) throw new Error(uploadData.message || 'Upload failed');
-
-        let paymentProofData = {};
-        if (paymentMethod === 'upi') {
-            const proofForm = new FormData();
-            proofForm.append('paymentProof', paymentProof);
-            const proofResponse = await fetch(`${API_BASE_URL}/print-orders/upload`, { method: 'POST', body: proofForm });
-            paymentProofData = await proofResponse.json();
-            if (!proofResponse.ok) throw new Error(paymentProofData.message || 'Payment proof upload failed');
-        }
 
         const payload = {
             studentName, mobile: phone,
@@ -460,12 +417,8 @@ async function submitPrintOrder() {
             specialInstructions: document.getElementById('special-instructions').value,
             fileName: uploadData.fileName, filePath: uploadData.filePath,
             fileType: uploadData.fileType, fileSize: uploadData.fileSize,
-            paymentProofFileName: paymentProofData.fileName || '',
-            paymentProofPath: paymentProofData.filePath || '',
-            paymentProofFileType: paymentProofData.fileType || '',
-            paymentProofFileSize: paymentProofData.fileSize || 0,
-            totalAmount: amount, paymentMethod, printerName,
-            upiTransactionId: paymentMethod === 'upi' ? upiTransactionId : '', paymentStatus: 'pending'
+            totalAmount: amount, paymentMethod: 'none', printerName,
+            paymentStatus: 'not_required'
         };
 
         const orderResponse = await fetch(`${API_BASE_URL}/print-orders`, {
@@ -473,7 +426,7 @@ async function submitPrintOrder() {
         });
         const orderData = await orderResponse.json();
         if (!orderResponse.ok) throw new Error(orderData.message || 'Order creation failed');
-        showPrintSuccessModal(orderData.tokenId, studentName, phone, amount, 'pending');
+        showPrintSuccessModal(orderData.tokenId, studentName, phone, amount, 'queued');
     } catch (error) {
         console.error(error);
         showToast(error.message || 'Error submitting print order', true);
@@ -497,7 +450,7 @@ function showPrintSuccessModal(tokenId, studentName, phone, amount, paymentStatu
             <p><strong>Student:</strong> ${studentName}</p>
             <p><strong>Phone:</strong> ${phone}</p>
             <p><strong>Total:</strong> ₹${amount}</p>
-            <p>${paymentStatus === 'pending' ? 'UPI payment is pending admin verification. Printing starts after approval.' : 'Ready for Pickup in ~10 mins. Show this token at the campus shop.'}</p>
+            <p>${paymentStatus === 'queued' ? 'Your document has been sent to the selected printer automatically.' : 'Ready for Pickup in ~10 mins. Show this token at the campus shop.'}</p>
             <button class="btn btn-primary" onclick="window.print()">Print Receipt</button>
         </div>
     `;

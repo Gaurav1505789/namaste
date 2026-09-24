@@ -164,43 +164,13 @@
                     <div class="price-row total"><span>Total Amount</span><strong id="price-total">₹0</strong></div>
                 </div>
 
-                <div class="payment-method-box">
-                    <h4>Payment Method</h4>
-                    <label class="radio-row"><input type="radio" name="printPaymentMethod" value="upi" checked> Pay with UPI / Paytm</label>
-                    <label class="radio-row"><input type="radio" name="printPaymentMethod" value="cod"> Cash on Delivery</label>
-                </div>
-
                 <label class="upi-transaction-field" for="print-printer">
                     <span>Printer</span>
                     <select id="print-printer" required>
                         <option value="">Loading printers...</option>
                     </select>
-                    <small>Online-paid orders are sent only to the selected printer. Cash orders are not printed automatically.</small>
+                    <small>Your document will be sent automatically to the selected printer.</small>
                 </label>
-
-                <div class="upi-payment-box">
-                    <h4>Pay securely with UPI</h4>
-                    <div class="payment-qr-frame">
-                        <img class="payment-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&amp;margin=10&amp;data=upi%3A%2F%2Fpay%3Fpa%3D8969292024%40ptyes%26pn%3DNamaste%20Campus%20Prints%26cu%3DINR" alt="UPI payment QR code">
-                    </div>
-                    <p class="payment-qr-instruction">Scan this QR to complete the payment, then upload the payment confirmation screenshot below for verification.</p>
-                    <p>Or tap below to open Paytm and pay the total amount.</p>
-                    <a id="upi-pay-link" class="btn btn-upi" href="#">Pay with Paytm</a>
-                    <label class="upi-transaction-field">
-                        <span>UPI Transaction ID / UTR</span>
-                        <input type="text" id="upi-transaction-id" placeholder="Enter the UTR after payment" autocomplete="off">
-                    </label>
-                    <label class="upi-transaction-field payment-proof-field">
-                        <span>Payment confirmation screenshot</span>
-                        <input type="file" id="payment-proof-input" accept="image/jpeg,image/png,image/webp" required>
-                    </label>
-                    <small>Payment will be verified by the campus shop admin before printing.</small>
-                </div>
-
-                <div class="cod-payment-box hidden" id="cod-payment-box">
-                    <h4>Cash on Delivery</h4>
-                    <p>Pay cash at the campus shop when you collect your printed documents.</p>
-                </div>
 
                 <button class="btn btn-primary full-width" id="submit-print-order">Submit Print Order</button>
             </div>
