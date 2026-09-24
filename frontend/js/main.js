@@ -1,6 +1,5 @@
 // API Configuration
 const API_BASE_URL = 'https://namaste-backend-e64a.onrender.com/api';
-const RAZORPAY_KEY_ID = 'your_razorpay_key_id'; // Update this from backend
 const PRINT_UPI_ID = '8969292024@ptyes';
 
 // Sample Products Data
@@ -162,9 +161,9 @@ function createProductCard(product) {
     const actionBtn = product.model3d
         ? `<div class="product-actions">
              <button class="product-btn btn-view3d" onclick="open3DViewer(${product.id})">View 3D</button>
-             <button class="product-btn" onclick="buyProduct(${product.id}, '${product.name}', ${product.price})">Buy Now</button>
+               <button class="product-btn" disabled>Purchase unavailable</button>
            </div>`
-        : `<button class="product-btn" onclick="buyProduct(${product.id}, '${product.name}', ${product.price})">Buy Now</button>`;
+           : '<button class="product-btn" disabled>Purchase unavailable</button>';
     card.innerHTML = `
         <div class="product-img-wrap">
             <img src="${product.image}" alt="${product.name}" class="product-image" loading="lazy">
@@ -194,138 +193,6 @@ function setupCategoryButtons() {
 }
 
 // Buy Product
-function buyProduct(productId, productName, price) {
-    currentPaymentData = {
-        productId,
-        productName,
-        price
-    };
-    
-    const details = document.getElementById('payment-details');
-    details.innerHTML = `
-        <p><strong>Product:</strong> <span>${productName}</span></p>
-        <p><strong>Price:</strong> <span>₹${price}</span></p>
-        <p><strong>Email:</strong> <span><input type="email" id="customer-email" placeholder="your@email.com" required></span></p>
-        <p><strong>Name:</strong> <span><input type="text" id="customer-name" placeholder="Your Name" required></span></p>
-        <p><strong>Phone:</strong> <span><input type="tel" id="customer-phone" placeholder="10 digit mobile" required></span></p>
-    `;
-    
-    document.getElementById('payment-modal').classList.add('show');
-}
-
-// Close Payment Modal
-function closePaymentModal() {
-    document.getElementById('payment-modal').classList.remove('show');
-}
-
-// Close Success Modal
-function closeSuccessModal() {
-    document.getElementById('success-modal').classList.remove('show');
-}
-
-// Make Payment
-document.getElementById('pay-btn')?.addEventListener('click', function() {
-    const email = document.getElementById('customer-email').value;
-    const name = document.getElementById('customer-name').value;
-    const phone = document.getElementById('customer-phone').value;
-
-    if (!email || !name || !phone) {
-        showToast('Please fill all details', true);
-        return;
-    }
-
-    initializeRazorpay(email, name, phone);
-});
-
-// Initialize Razorpay Payment
-async function initializeRazorpay(email, name, phone) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/payments/create-order`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                amount: currentPaymentData.price,
-                productId: currentPaymentData.productId,
-                customerEmail: email,
-                customerName: name,
-                customerPhone: phone
-            })
-        });
-
-        const data = await response.json();
-
-        const options = {
-            key: RAZORPAY_KEY_ID,
-            amount: data.amount,
-            currency: data.currency,
-            order_id: data.orderId,
-            handler: function(response) {
-                verifyPayment(response, email);
-            },
-            prefill: {
-                name: name,
-                email: email,
-                contact: phone
-            },
-            theme: {
-                color: '#FF6B35'
-            },
-            notes: {
-                productName: currentPaymentData.productName
-            }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-    } catch (error) {
-        console.error('Payment initialization error:', error);
-        showToast('भुगतान शुरू करने में त्रुटि | Error initializing payment', true);
-    }
-}
-
-// Verify Payment
-async function verifyPayment(paymentResponse, email) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/payments/verify`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                razorpay_order_id: paymentResponse.razorpay_order_id,
-                razorpay_payment_id: paymentResponse.razorpay_payment_id,
-                razorpay_signature: paymentResponse.razorpay_signature
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            closePaymentModal();
-            showSuccessModal(currentPaymentData.productName, data.downloadToken);
-            showToast('Payment successful!');
-        } else {
-            showToast('Payment verification failed', true);
-        }
-    } catch (error) {
-        console.error('Payment verification error:', error);
-        showToast('Error verifying payment', true);
-    }
-}
-
-// Show Success Modal
-function showSuccessModal(productName, downloadToken) {
-    const modal = document.getElementById('success-modal');
-    const link = document.getElementById('download-link');
-    
-    link.href = `${API_BASE_URL}/products/download/${downloadToken}`;
-    link.textContent = `Download ${productName}`;
-    
-    modal.classList.add('show');
-}
-
 // Setup Contact Form
 function setupContactForm() {
     const form = document.querySelector('.contact-form');
@@ -606,59 +473,11 @@ async function submitPrintOrder() {
         });
         const orderData = await orderResponse.json();
         if (!orderResponse.ok) throw new Error(orderData.message || 'Order creation failed');
-        if (paymentMethod === 'razorpay') {
-            await initializePrintRazorpay(orderData.order, studentName, phone, amount);
-            return;
-        }
         showPrintSuccessModal(orderData.tokenId, studentName, phone, amount, 'pending');
     } catch (error) {
         console.error(error);
         showToast(error.message || 'Error submitting print order', true);
     }
-}
-
-async function initializePrintRazorpay(printOrder, studentName, phone, amount) {
-    const createResponse = await fetch(`${API_BASE_URL}/payments/create-print-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, printOrderId: printOrder._id || printOrder.tokenId, customerName: studentName, customerPhone: phone })
-    });
-    const paymentOrder = await createResponse.json();
-    if (!createResponse.ok) throw new Error(paymentOrder.message || 'Unable to start online payment');
-
-    const printOrderIdentifier = printOrder._id || printOrder.tokenId;
-    const verify = (response) => verifyPrintPayment(response, printOrderIdentifier, studentName, phone, amount);
-    if (paymentOrder.demo) {
-        await verify({
-            razorpay_order_id: paymentOrder.orderId,
-            razorpay_payment_id: 'demo_payment_id',
-            razorpay_signature: 'demo_signature'
-        });
-        return;
-    }
-
-    const rzp = new Razorpay({
-        key: paymentOrder.key,
-        amount: paymentOrder.amount,
-        currency: paymentOrder.currency,
-        order_id: paymentOrder.orderId,
-        handler: verify,
-        prefill: { name: studentName, contact: phone },
-        theme: { color: '#FF6B35' }
-    });
-    rzp.open();
-}
-
-async function verifyPrintPayment(paymentResponse, printOrderId, studentName, phone, amount) {
-    const response = await fetch(`${API_BASE_URL}/payments/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...paymentResponse, printOrderId })
-    });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || 'Print payment verification failed');
-    showPrintSuccessModal(data.order.tokenId, studentName, phone, amount, 'paid');
-    showToast('Payment successful. Your document was sent to the printer.');
 }
 
 function showPrintSuccessModal(tokenId, studentName, phone, amount, paymentStatus = 'paid') {
@@ -723,10 +542,7 @@ function open3DViewer(productId) {
     if (!product || !product.model3d) return;
 
     document.getElementById('viewer-title').textContent = product.name;
-    document.getElementById('viewer-buy-btn').onclick = () => {
-        closeViewerModal();
-        buyProduct(product.id, product.name, product.price);
-    };
+    document.getElementById('viewer-buy-btn')?.setAttribute('disabled', 'disabled');
 
     document.getElementById('viewer-modal').classList.add('show');
     initThreeJS(product.model3d);
